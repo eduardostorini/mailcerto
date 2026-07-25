@@ -77,8 +77,9 @@ class IPLocationPage(QWidget):
         self.table_view = QTableView()
         self.table_view.setModel(self.results_model)
         header = self.table_view.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(1, QHeaderView.Stretch)
+        header.setSectionResizeMode(QHeaderView.Stretch)
+        vheader = self.table_view.verticalHeader()
+        vheader.setDefaultAlignment(Qt.AlignCenter)
         self.table_view.clicked.connect(self.on_row_selected)
         splitter.addWidget(self.table_view)
 

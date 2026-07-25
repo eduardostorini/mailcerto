@@ -169,17 +169,14 @@ class TestIPLocationResultsModelData:
 # ---------------------------------------------------------------------------
 
 class TestIPLocationResultsModelAlignment:
-    """Verifica o alinhamento das células."""
+    """Verifica o alinhamento das células: todas as colunas são alinhadas
+    igualmente (esquerda + centro vertical) para consistência visual."""
 
-    def test_city_and_state_are_left_aligned(self, qapp, sample_success_result):
+    def test_all_columns_are_equally_left_aligned(self, qapp, sample_success_result):
         model = IPLocationResultsModel([sample_success_result])
-        for col in (1, 2):
-            assert model.data(model.index(0, col), Qt.TextAlignmentRole) == (Qt.AlignLeft | Qt.AlignVCenter)
-
-    def test_ip_cep_status_time_are_center_aligned(self, qapp, sample_success_result):
-        model = IPLocationResultsModel([sample_success_result])
-        for col in (0, 3, 4, 5):
-            assert model.data(model.index(0, col), Qt.TextAlignmentRole) == Qt.AlignCenter
+        expected = Qt.AlignLeft | Qt.AlignVCenter
+        for col in range(model.columnCount()):
+            assert model.data(model.index(0, col), Qt.TextAlignmentRole) == expected
 
 
 # ---------------------------------------------------------------------------

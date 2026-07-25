@@ -29,7 +29,19 @@ MANIFEST
 
 # PyInstaller
 *.manifest
-*.spec
+# Keep the hand-authored build spec for the project
+!MailCerto.spec
+
+# Build working dirs
+__pyinstaller/
+MailCerto.spec.bak
+*.pyi.bak
+
+# App-specific PNG/ICO icons we regenerate from icon.svg via scripts/generate_icons.py
+# (icon.svg is always the authoritative source and is tracked)
+mailcerto/resources/icon_*.png
+mailcerto/resources/icon.png
+mailcerto/resources/icon.ico
 
 # Installer logs
 pip-log.txt

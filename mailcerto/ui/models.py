@@ -97,8 +97,6 @@ class IPLocationResultsModel(QAbstractTableModel):
                 return f"{item.response_time_ms:.1f}" if item.response_time_ms is not None else "-"
 
         elif role == Qt.TextAlignmentRole:
-            if col in (0, 3, 4, 5):
-                return Qt.AlignCenter
             return Qt.AlignLeft | Qt.AlignVCenter
 
         return None
