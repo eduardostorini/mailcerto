@@ -8,7 +8,6 @@ from PySide6.QtCore import Qt, Slot, QStringListModel
 from mailcerto.core.normalization import detect_and_normalize_target
 from mailcerto.ui.pages.base_page import PlaceholderPage
 from mailcerto.ui.pages.dashboard_page import DashboardPage
-from mailcerto.ui.pages.dns_page import DNSPage
 from mailcerto.ui.pages.email_auth_page import EmailAuthPage
 from mailcerto.ui.pages.smtp_page import SMTPPage
 from mailcerto.ui.pages.tls_page import TLSPage
@@ -19,6 +18,7 @@ from mailcerto.ui.pages.super_analysis_page import SuperAnalysisPage
 from mailcerto.ui.pages.network_page import NetworkPage
 from mailcerto.ui.pages.rdap_page import RdapPage
 from mailcerto.ui.pages.ports_page import PortsPage
+from mailcerto.ui.pages.single_dns_page import SingleDNSPage
 from mailcerto.database.repositories import get_unique_targets, save_analysis
 from mailcerto.core.models import AnalysisResult
 from datetime import datetime
@@ -54,14 +54,20 @@ class MainWindow(QMainWindow):
         logo_label.setAlignment(Qt.AlignCenter)
         sidebar_layout.addWidget(logo_label)
 
-        # Menu List (Filtro solicitado: removendo lote, monitoramento, relatórios, configurações e convertendo Histórico em Log)
+        # Menu List - Quebrando DNS em submenus individuais
         self.menu_list = QListWidget()
         self.menu_list.setObjectName("menuList")
         
         self.menu_items = [
             "Visão Geral", 
             "Super Análise", 
-            "DNS", 
+            "DNS - MX",
+            "DNS - TXT",
+            "DNS - A",
+            "DNS - AAAA",
+            "DNS - NS",
+            "DNS - CNAME",
+            "DNS - SOA",
             "Autenticação",
             "SMTP", 
             "TLS & Certificados", 
@@ -124,7 +130,16 @@ class MainWindow(QMainWindow):
         # Initialize specific functional pages
         self.dashboard_page = DashboardPage()
         self.super_analysis_page = SuperAnalysisPage()
-        self.dns_page = DNSPage()
+        
+        # Submenus de DNS
+        self.dns_mx_page = SingleDNSPage("MX", "Servidores de E-mail", "Lista os servidores MX responsáveis por receber e-mails pelo domínio.")
+        self.dns_txt_page = SingleDNSPage("TXT", "Registros de Texto", "Lista strings de texto associadas ao domínio, usadas para verificação de propriedade.")
+        self.dns_a_page = SingleDNSPage("A", "Apontamento IPv4", "Mapeia o domínio para um ou mais endereços IPv4 físicos.")
+        self.dns_aaaa_page = SingleDNSPage("AAAA", "Apontamento IPv6", "Mapeia o domínio para um ou mais endereços IPv6 físicos.")
+        self.dns_ns_page = SingleDNSPage("NS", "Servidores de Nomes", "Determina quais servidores DNS respondem oficialmente pelo domínio.")
+        self.dns_cname_page = SingleDNSPage("CNAME", "Apelidos (Aliases)", "Mapeia um nome alternativo para o domínio principal ou canônico.")
+        self.dns_soa_page = SingleDNSPage("SOA", "Início de Autoridade", "Contém informações administrativas cruciais da zona DNS (TTL, serial, refreshes).")
+
         self.email_auth_page = EmailAuthPage()
         self.smtp_page = SMTPPage()
         self.tls_page = TLSPage()
@@ -136,19 +151,25 @@ class MainWindow(QMainWindow):
         self.log_page = LogPage()
         
         # Placeholders and real pages stacked
-        self.pages_stack.addWidget(self.dashboard_page)       # index 0 - Visão Geral
-        self.pages_stack.addWidget(self.super_analysis_page)   # index 1 - Super Análise
-        self.pages_stack.addWidget(self.dns_page)             # index 2 - DNS
-        self.pages_stack.addWidget(self.email_auth_page)       # index 3 - Autenticação
-        self.pages_stack.addWidget(self.smtp_page)             # index 4 - SMTP
-        self.pages_stack.addWidget(self.tls_page)              # index 5 - TLS & Certificados
-        self.pages_stack.addWidget(self.blacklist_page)        # index 6 - Blacklists
-        self.pages_stack.addWidget(self.http_page)             # index 7 - HTTP & Segurança
-        self.pages_stack.addWidget(self.network_page)          # index 8 - Rede
-        self.pages_stack.addWidget(self.ports_page)            # index 9 - Portas (Scan)
-        self.pages_stack.addWidget(self.rdap_page)             # index 10 - WHOIS & RDAP
-        self.pages_stack.addWidget(self.log_page)              # index 11 - Log
-        self.pages_stack.addWidget(PlaceholderPage("Sobre MailCerto", "MailCerto v1.0.0. Licença Apache 2.0.")) # index 12
+        self.pages_stack.addWidget(self.dashboard_page)         # index 0 - Visão Geral
+        self.pages_stack.addWidget(self.super_analysis_page)     # index 1 - Super Análise
+        self.pages_stack.addWidget(self.dns_mx_page)             # index 2 - DNS MX
+        self.pages_stack.addWidget(self.dns_txt_page)            # index 3 - DNS TXT
+        self.pages_stack.addWidget(self.dns_a_page)              # index 4 - DNS A
+        self.pages_stack.addWidget(self.dns_aaaa_page)           # index 5 - DNS AAAA
+        self.pages_stack.addWidget(self.dns_ns_page)             # index 6 - DNS NS
+        self.pages_stack.addWidget(self.dns_cname_page)          # index 7 - DNS CNAME
+        self.pages_stack.addWidget(self.dns_soa_page)            # index 8 - DNS SOA
+        self.pages_stack.addWidget(self.email_auth_page)         # index 9 - Autenticação
+        self.pages_stack.addWidget(self.smtp_page)               # index 10 - SMTP
+        self.pages_stack.addWidget(self.tls_page)                # index 11 - TLS & Certificados
+        self.pages_stack.addWidget(self.blacklist_page)          # index 12 - Blacklists
+        self.pages_stack.addWidget(self.http_page)               # index 13 - HTTP & Segurança
+        self.pages_stack.addWidget(self.network_page)            # index 14 - Rede
+        self.pages_stack.addWidget(self.ports_page)              # index 15 - Portas (Scan)
+        self.pages_stack.addWidget(self.rdap_page)               # index 16 - WHOIS & RDAP
+        self.pages_stack.addWidget(self.log_page)                # index 17 - Log
+        self.pages_stack.addWidget(PlaceholderPage("Sobre MailCerto", "MailCerto v1.0.0. Licença Apache 2.0.")) # index 18
 
         content_layout.addWidget(self.pages_stack)
         main_layout.addWidget(self.content_container)
@@ -179,8 +200,8 @@ class MainWindow(QMainWindow):
 
     def on_menu_changed(self, row):
         self.pages_stack.setCurrentIndex(row)
-        # Se entrar na aba de logs (Index 11), atualiza a lista automaticamente
-        if row == 11:
+        # Se entrar na aba de logs (Index 17), atualiza a lista automaticamente
+        if row == 17:
             self.log_page.load_logs()
             
         # Se não há target em cache mas há texto no input, atualiza
@@ -208,55 +229,70 @@ class MainWindow(QMainWindow):
                 self.super_analysis_page.start_super_analysis(clean_domain)
             except Exception as e:
                 self.status_bar.showMessage(f"Erro na Super Análise: {str(e)}")
-        elif page_index == 2:  # DNS Page
-            self.status_bar.showMessage(f"Análise DNS automática iniciada para: {clean_domain}")
-            try:
-                self.dns_page.start_dns_analysis(clean_domain)
-            except Exception as e:
-                self.status_bar.showMessage(f"Erro ao iniciar análise: {str(e)}")
-        elif page_index == 3:  # Autenticação Page (SPF, DMARC)
+        elif page_index == 2:  # DNS MX
+            self.status_bar.showMessage(f"Consultando registros MX para: {clean_domain}")
+            self.dns_mx_page.start_dns_analysis(clean_domain)
+        elif page_index == 3:  # DNS TXT
+            self.status_bar.showMessage(f"Consultando registros TXT para: {clean_domain}")
+            self.dns_txt_page.start_dns_analysis(clean_domain)
+        elif page_index == 4:  # DNS A
+            self.status_bar.showMessage(f"Consultando registros A para: {clean_domain}")
+            self.dns_a_page.start_dns_analysis(clean_domain)
+        elif page_index == 5:  # DNS AAAA
+            self.status_bar.showMessage(f"Consultando registros AAAA para: {clean_domain}")
+            self.dns_aaaa_page.start_dns_analysis(clean_domain)
+        elif page_index == 6:  # DNS NS
+            self.status_bar.showMessage(f"Consultando registros NS para: {clean_domain}")
+            self.dns_ns_page.start_dns_analysis(clean_domain)
+        elif page_index == 7:  # DNS CNAME
+            self.status_bar.showMessage(f"Consultando registros CNAME para: {clean_domain}")
+            self.dns_cname_page.start_dns_analysis(clean_domain)
+        elif page_index == 8:  # DNS SOA
+            self.status_bar.showMessage(f"Consultando registros SOA para: {clean_domain}")
+            self.dns_soa_page.start_dns_analysis(clean_domain)
+        elif page_index == 9:  # Autenticação Page (SPF, DMARC)
             self.status_bar.showMessage(f"Análise de Autenticação iniciada para: {clean_domain}")
             try:
                 self.email_auth_page.start_auth_analysis(clean_domain)
             except Exception as e:
                 self.status_bar.showMessage(f"Erro ao iniciar análise: {str(e)}")
-        elif page_index == 4:  # SMTP Page
+        elif page_index == 10:  # SMTP Page
             self.status_bar.showMessage(f"Análise SMTP iniciada para: {clean_domain}")
             try:
                 self.smtp_page.start_smtp_analysis(clean_domain)
             except Exception as e:
                 self.status_bar.showMessage(f"Erro ao iniciar análise: {str(e)}")
-        elif page_index == 5:  # TLS Page
+        elif page_index == 11:  # TLS Page
             self.status_bar.showMessage(f"Análise TLS iniciada para: {clean_domain}")
             try:
                 self.tls_page.start_tls_analysis(clean_domain)
             except Exception as e:
                 self.status_bar.showMessage(f"Erro ao iniciar análise: {str(e)}")
-        elif page_index == 6:  # Blacklist Page
+        elif page_index == 12:  # Blacklist Page
             self.status_bar.showMessage(f"Análise de Blacklist iniciada para: {clean_domain}")
             try:
                 self.blacklist_page.start_blacklist_analysis(clean_domain)
             except Exception as e:
                 self.status_bar.showMessage(f"Erro ao iniciar análise: {str(e)}")
-        elif page_index == 7:  # HTTP & Segurança Page
+        elif page_index == 13:  # HTTP & Segurança Page
             self.status_bar.showMessage(f"Análise HTTP/Segurança iniciada para: {clean_domain}")
             try:
                 self.http_page.start_http_analysis(clean_domain)
             except Exception as e:
                 self.status_bar.showMessage(f"Erro ao iniciar análise: {str(e)}")
-        elif page_index == 8:  # Rede Page
+        elif page_index == 14:  # Rede Page
             self.status_bar.showMessage(f"Análise de Rede iniciada para: {clean_domain}")
             try:
                 self.network_page.start_network_analysis(clean_domain)
             except Exception as e:
                 self.status_bar.showMessage(f"Erro ao iniciar análise: {str(e)}")
-        elif page_index == 9:  # Portas (Scan) Page
+        elif page_index == 15:  # Portas (Scan) Page
             self.status_bar.showMessage(f"Escaneando portas do host: {clean_domain}")
             try:
                 self.ports_page.start_ports_scan(clean_domain)
             except Exception as e:
                 self.status_bar.showMessage(f"Erro ao iniciar escaneamento: {str(e)}")
-        elif page_index == 10:  # RDAP Page
+        elif page_index == 16:  # RDAP Page
             self.status_bar.showMessage(f"Consulta RDAP iniciada para: {clean_domain}")
             try:
                 self.rdap_page.start_rdap_analysis(clean_domain)
@@ -305,6 +341,12 @@ class MainWindow(QMainWindow):
             self.trigger_page_analysis(current_idx)
 
     def cancel_global_analysis(self):
-        self.dns_page.cancel_analysis()
+        self.dns_mx_page.cancel_analysis()
+        self.dns_txt_page.cancel_analysis()
+        self.dns_a_page.cancel_analysis()
+        self.dns_aaaa_page.cancel_analysis()
+        self.dns_ns_page.cancel_analysis()
+        self.dns_cname_page.cancel_analysis()
+        self.dns_soa_page.cancel_analysis()
         self.super_analysis_page.cancel_analysis()
         self.status_bar.showMessage("Análise cancelada pelo usuário.")

@@ -4,16 +4,18 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal, Slot
 from mailcerto.ui.models import DNSResultsModel
-from mailcerto.checks.network.network_check import check_network_diagnostics
-from mailcerto.checks.network.ip_location import check_ip_location
+from mailcerto.checks.dns.dns_check import perform_dns_check
 from mailcerto.core.models import CheckResult, CheckStatus
 
-class NetworkPage(QWidget):
+class SingleDNSPage(QWidget):
     check_finished = Signal(object)
     all_checks_finished = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, record_type: str, friendly_name: str, desc_text: str, parent=None):
         super().__init__(parent)
+        self.record_type = record_type
+        self.friendly_name = friendly_name
+        self.desc_text = desc_text
         self.active_tasks = []
         self._current_results = []
         self.last_analyzed_domain = ""
@@ -24,12 +26,12 @@ class NetworkPage(QWidget):
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(10)
 
-        title = QLabel("Ferramentas de Rede")
+        title = QLabel(f"DNS - {self.friendly_name} ({self.record_type})")
         title.setObjectName("titleLabel")
         title.setStyleSheet("font-size: 18px; font-weight: bold;")
         layout.addWidget(title)
 
-        desc = QLabel("Diagnósticos de latência, ping, resolução IP e geolocalização física do servidor.")
+        desc = QLabel(self.desc_text)
         desc.setObjectName("descLabel")
         layout.addWidget(desc)
 
@@ -52,7 +54,7 @@ class NetworkPage(QWidget):
         details_layout = QVBoxLayout(self.details_widget)
         details_layout.setContentsMargins(0, 10, 0, 0)
         
-        self.details_title = QLabel("Detalhes da Rede / Geo-localização")
+        self.details_title = QLabel("Detalhes do Registro")
         self.details_title.setStyleSheet("font-size: 14px; font-weight: bold;")
         self.details_text = QLabel("Selecione um registro na tabela para ver os detalhes técnicos brutos.")
         self.details_text.setWordWrap(True)
@@ -82,11 +84,9 @@ class NetworkPage(QWidget):
             detail_content += f"<b>Resultado:</b> {result.summary}<br/><br/>"
             if result.details:
                 detail_content += f"<b>Detalhes Técnicos:</b><br/><pre>{result.details}</pre>"
-            if result.recommendation:
-                detail_content += f"<br/><b>Recomendação:</b><br/>{result.recommendation}"
             self.details_text.setText(detail_content)
 
-    def start_network_analysis(self, domain: str):
+    def start_dns_analysis(self, domain: str):
         if self.last_analyzed_domain == domain and self._current_results:
             return
 
@@ -94,34 +94,22 @@ class NetworkPage(QWidget):
         self._current_results = []
         self.results_model.update_results([])
         self.last_analyzed_domain = domain
-        self.details_text.setText("Executando diagnósticos de rede e geolocalização... Por favor, aguarde.")
+        self.details_text.setText(f"Consultando registros {self.record_type} para {domain}... Por favor, aguarde.")
         
         self.progress_bar.setVisible(True)
         self.progress_bar.setMaximum(1)
         self.progress_bar.setValue(0)
         
-        task = asyncio.create_task(self._run_network_check(domain))
+        task = asyncio.create_task(self._run_dns_check(domain))
         self.active_tasks.append(task)
 
-    async def _run_network_check(self, domain: str):
+    async def _run_dns_check(self, domain: str):
         try:
-            # Execute both network diagnostics and geo-location concurrently
-            net_task = check_network_diagnostics(domain)
-            loc_task = check_ip_location(domain)
-            
-            net_res, loc_res = await asyncio.gather(net_task, loc_task)
-            
-            total_items = len(net_res) + len(loc_res)
-            self.progress_bar.setMaximum(total_items)
-            
-            for r in net_res:
-                self.check_finished.emit(r)
-            for r in loc_res:
-                self.check_finished.emit(r)
-                
+            result = await perform_dns_check(domain, self.record_type)
+            self.check_finished.emit(result)
         except Exception as e:
             self.check_finished.emit(CheckResult(
-                check_id="net_err", category="Rede", title="Diagnósticos de Rede",
+                check_id=f"dns_{self.record_type.lower()}_err", category="DNS", title=f"Registro {self.record_type}",
                 status=CheckStatus.ERROR, summary=str(e)
             ))
 

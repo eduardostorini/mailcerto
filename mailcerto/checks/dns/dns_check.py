@@ -24,8 +24,43 @@ async def perform_dns_check(target: str, record_type: str) -> CheckResult:
         
         elapsed = (time.perf_counter() - t0) * 1000.0
         
-        details = f"Registros encontrados:\n" + "\n".join(f"- {r}" for r in rdata_list)
-        summary = f"Encontrado(s) {len(rdata_list)} registro(s) {record_type} para {target}."
+        # High-detail custom parsing based on DNS record type
+        details_list = []
+        summary_parts = []
+        if record_type == "MX":
+            # Sort MX records by priority (first field usually is priority)
+            mx_records = []
+            for r in answer:
+                mx_records.append((r.preference, r.exchange.to_text()))
+            mx_records.sort(key=lambda x: x[0])
+            for pref, ex in mx_records:
+                details_list.append(f"- Servidor: {ex} (Prioridade: {pref})")
+                summary_parts.append(f"{ex} ({pref})")
+            summary = "Servidores de e-mail (MX): " + ", ".join(summary_parts)
+            details = "Registros MX Ordenados por Prioridade:\n" + "\n".join(details_list)
+        elif record_type == "TXT":
+            for r in rdata_list:
+                details_list.append(f"- {r}")
+            summary = f"Registros TXT encontrados: " + ", ".join(rdata_list)[:100] + ("..." if len(", ".join(rdata_list)) > 100 else "")
+            details = "Registros TXT Encontrados:\n" + "\n".join(details_list)
+        elif record_type == "A":
+            for r in rdata_list:
+                details_list.append(f"- Endereço IPv4: {r}")
+            summary = "IPs IPv4 (A): " + ", ".join(rdata_list)
+            details = "Registros de Endereço IPv4 (A):\n" + "\n".join(details_list)
+        elif record_type == "AAAA":
+            for r in rdata_list:
+                details_list.append(f"- Endereço IPv6: {r}")
+            summary = "IPs IPv6 (AAAA): " + ", ".join(rdata_list)
+            details = "Registros de Endereço IPv6 (AAAA):\n" + "\n".join(details_list)
+        elif record_type == "NS":
+            for r in rdata_list:
+                details_list.append(f"- Servidor DNS Autoridade: {r}")
+            summary = "Nameservers (NS): " + ", ".join(rdata_list)
+            details = "Nameservers de Autoridade (NS):\n" + "\n".join(details_list)
+        else:
+            details = f"Registros encontrados:\n" + "\n".join(f"- {r}" for r in rdata_list)
+            summary = f"Encontrado(s) {len(rdata_list)} registro(s) {record_type} para {target}."
         
         raw_data = {
             "record_type": record_type,
@@ -49,7 +84,6 @@ async def perform_dns_check(target: str, record_type: str) -> CheckResult:
         )
 
     except dns.resolver.NoAnswer as e:
-        print(f"[DNS RESOLVER NO ANSWER ERROR] target={target} record_type={record_type} err={str(e)}")
         elapsed = (time.perf_counter() - t0) * 1000.0
         return CheckResult(
             check_id=check_id,
@@ -65,7 +99,6 @@ async def perform_dns_check(target: str, record_type: str) -> CheckResult:
             finished_at=datetime.utcnow()
         )
     except dns.resolver.NXDOMAIN as e:
-        print(f"[DNS RESOLVER NXDOMAIN ERROR] target={target} record_type={record_type} err={str(e)}")
         elapsed = (time.perf_counter() - t0) * 1000.0
         return CheckResult(
             check_id=check_id,
@@ -81,9 +114,7 @@ async def perform_dns_check(target: str, record_type: str) -> CheckResult:
             finished_at=datetime.utcnow()
         )
     except Exception as e:
-        print(f"[DNS RESOLVER GENERIC ERROR] target={target} record_type={record_type} err={str(e)}")
         import traceback
-        traceback.print_exc()
         elapsed = (time.perf_counter() - t0) * 1000.0
         return CheckResult(
             check_id=check_id,

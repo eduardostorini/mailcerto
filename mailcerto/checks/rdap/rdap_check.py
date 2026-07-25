@@ -17,9 +17,22 @@ async def check_rdap_whois(domain: str) -> list[CheckResult]:
             
             if resp.status_code == 200:
                 data = resp.json()
-                # Extraindo informações RDAP básicas
                 ldh_name = data.get("ldhName", domain)
                 status_list = data.get("status", [])
+                
+                # Extraindo o dono do domínio (Registrant)
+                owner_info = "Não informado no RDAP público."
+                for entity in data.get("entities", []):
+                    roles = entity.get("roles", [])
+                    if "registrant" in roles or "registrant" in [r.lower() for r in roles]:
+                        vcard = entity.get("vcardArray", [])
+                        if len(vcard) > 1:
+                            properties = vcard[1]
+                            for prop in properties:
+                                if prop[0] == "fn":
+                                    owner_info = prop[3]
+                                    break
+                        break
                 
                 events = []
                 for event in data.get("events", []):
@@ -27,11 +40,16 @@ async def check_rdap_whois(domain: str) -> list[CheckResult]:
                     date = event.get("eventDate", "")
                     events.append(f"- {action}: {date}")
                 
-                details = f"Nome: {ldh_name}\nStatus: {', '.join(status_list)}\n\nEventos:\n" + "\n".join(events)
+                details = (
+                    f"Domínio: {ldh_name}\n"
+                    f"Dono/Registrante: {owner_info}\n"
+                    f"Status: {', '.join(status_list)}\n\n"
+                    f"Eventos:\n" + "\n".join(events)
+                )
                 
                 results.append(CheckResult(
                     check_id="rdap_whois", category="WHOIS & RDAP", title="Consulta RDAP",
-                    status=CheckStatus.SUCCESS, summary="Informações RDAP obtidas com sucesso.",
+                    status=CheckStatus.SUCCESS, summary=f"Dono: {owner_info}",
                     details=details, response_time_ms=elapsed
                 ))
             else:

@@ -113,10 +113,8 @@ class DNSPage(QWidget):
             self.details_text.setText(detail_content)
 
     def start_dns_analysis(self, domain: str):
-        print(f"[DNS ANALYSIS] Starting analysis for domain: {domain}")
         # Evitar re-analisar se já foi analisado com sucesso
         if self.last_analyzed_domain == domain and self._current_results:
-            print(f"[DNS ANALYSIS] Domain {domain} already in cache. Skipping query.")
             return
 
         self.cancel_analysis()
@@ -144,19 +142,16 @@ class DNSPage(QWidget):
         
         # Launch asyncio tasks
         for r_type in record_types:
-            print(f"[DNS ANALYSIS] Launching task for record: {r_type}")
             task = asyncio.create_task(self._run_single_dns_check(domain, r_type))
             self.active_tasks.append(task)
             
     async def _run_single_dns_check(self, domain: str, r_type: str):
         try:
             result = await perform_dns_check(domain, r_type)
-            print(f"[DNS ANALYSIS] Finished check for {r_type} with status {result.status}")
             self.check_finished.emit(result)
         except asyncio.CancelledError:
-            print(f"[DNS ANALYSIS] Task for {r_type} was cancelled.")
+            pass
         except Exception as e:
-            print(f"[DNS ANALYSIS] Task for {r_type} failed: {str(e)}")
             err_result = CheckResult(
                 check_id=f"dns_{r_type.lower()}",
                 category="DNS",
