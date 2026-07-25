@@ -1,0 +1,159 @@
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mailcerto"
+version = "1.0.0"
+description = "Ferramenta completa para análise e verificação de segurança de domínios, IPs e serviços de e-mail"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "MailCerto Contributors", email = "seu-email@exemplo.com"}
+]
+keywords = [
+    "email",
+    "security",
+    "dns",
+    "smtp",
+    "tls",
+    "ssl",
+    "domain",
+    "analysis",
+    "verification"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Networking",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Internet :: Log Analysis",
+    "Topic :: Security",
+]
+
+dependencies = [
+    "PySide6>=6.6.0",
+    "qasync>=0.23.0",
+    "dnspython>=2.6.0",
+    "httpx>=0.27.0",
+    "cryptography>=42.0.0",
+    "SQLAlchemy>=2.0.0",
+    "pydantic>=2.6.0",
+    "Jinja2>=3.1.0",
+    "reportlab>=4.1.0",
+    "tldextract>=5.1.0",
+    "qtawesome>=1.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "isort>=5.13.0",
+    "pylint>=3.0.0",
+]
+build = [
+    "pyinstaller>=6.5.0",
+    "pyinstaller-hooks-contrib>=2023.0",
+]
+docs = [
+    "sphinx>=7.0.0",
+    "sphinx-rtd-theme>=1.3.0",
+    "sphinx-autodoc-typehints>=1.24.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/seu-usuario/mailcerto"
+Documentation = "https://mailcerto.readthedocs.io"
+Repository = "https://github.com/seu-usuario/mailcerto.git"
+"Bug Tracker" = "https://github.com/seu-usuario/mailcerto/issues"
+"Release Notes" = "https://github.com/seu-usuario/mailcerto/releases"
+
+[project.scripts]
+mailcerto = "mailcerto.app:main"
+mailcerto-cli = "mailcerto.cli:main"
+
+[tool.setuptools]
+packages = ["mailcerto"]
+
+[tool.setuptools.package-data]
+mailcerto = [
+    "resources/**/*",
+    "reports/templates/**/*",
+    "ui/themes/**/*",
+]
+
+[tool.black]
+line-length = 120
+target-version = ['py310', 'py311', 'py312', 'py313']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_mode = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+line_length = 120
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = "-v --strict-markers --tb=short"
+markers = [
+    "unit: Testes unitários",
+    "integration: Testes de integração",
+    "slow: Testes lentos",
+]
+
+[tool.coverage.run]
+source = ["mailcerto"]
+omit = ["*/tests/*", "*/site-packages/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]

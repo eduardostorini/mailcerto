@@ -1,10 +1,12 @@
 import sys
+from pathlib import Path
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton,
     QStackedWidget, QFrame, QListWidget, QLabel, QProgressBar, QStatusBar,
     QMessageBox, QCompleter
 )
 from PySide6.QtCore import Qt, Slot, QStringListModel
+from PySide6.QtGui import QIcon
 from mailcerto.core.normalization import detect_and_normalize_target
 from mailcerto.ui.pages.base_page import PlaceholderPage
 from mailcerto.ui.pages.dashboard_page import DashboardPage
@@ -18,6 +20,7 @@ from mailcerto.ui.pages.super_analysis_page import SuperAnalysisPage
 from mailcerto.ui.pages.network_page import NetworkPage
 from mailcerto.ui.pages.rdap_page import RdapPage
 from mailcerto.ui.pages.ports_page import PortsPage
+from mailcerto.ui.pages.ip_location_page import IPLocationPage
 from mailcerto.ui.pages.single_dns_page import SingleDNSPage
 from mailcerto.database.repositories import get_unique_targets, save_analysis
 from mailcerto.core.models import AnalysisResult
@@ -27,6 +30,12 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("MailCerto")
+        
+        # Load application icon
+        icon_path = Path(__file__).parent.parent / "resources" / "icon.svg"
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
+        
         self.resize(1440, 900)
         self.setMinimumSize(1100, 700)
         
