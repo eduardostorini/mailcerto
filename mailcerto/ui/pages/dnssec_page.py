@@ -4,13 +4,10 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal, Slot
 from mailcerto.ui.models import DNSResultsModel
-from mailcerto.checks.email.auth_check import check_spf, check_dmarc
-from mailcerto.checks.email.dkim_check import check_dkim
-from mailcerto.checks.email.mtasts_check import check_mtasts
-from mailcerto.checks.email.tlsrpt_check import check_tlsrpt
+from mailcerto.checks.dns.dnssec_check import check_dnssec
 from mailcerto.core.models import CheckResult, CheckStatus
 
-class EmailAuthPage(QWidget):
+class DNSSECPage(QWidget):
     check_finished = Signal(object)
     all_checks_finished = Signal()
 
@@ -26,12 +23,12 @@ class EmailAuthPage(QWidget):
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(10)
 
-        title = QLabel("Autenticação de E-mail")
+        title = QLabel("DNSSEC - Segurança DNS")
         title.setObjectName("titleLabel")
         title.setStyleSheet("font-size: 18px; font-weight: bold;")
         layout.addWidget(title)
 
-        desc = QLabel("Verifique os registros SPF, DMARC, DKIM, MTA-STS e TLS-RPT do seu domínio.")
+        desc = QLabel("Verifica a validação DNSSEC do domínio para proteger contra ataques de envenenamento de cache DNS.")
         desc.setObjectName("descLabel")
         layout.addWidget(desc)
 
@@ -54,7 +51,7 @@ class EmailAuthPage(QWidget):
         details_layout = QVBoxLayout(self.details_widget)
         details_layout.setContentsMargins(0, 10, 0, 0)
         
-        self.details_title = QLabel("Detalhes da Autenticação")
+        self.details_title = QLabel("Detalhes DNSSEC")
         self.details_title.setStyleSheet("font-size: 14px; font-weight: bold;")
         self.details_text = QLabel("Selecione um registro na tabela para ver os detalhes técnicos brutos.")
         self.details_text.setWordWrap(True)
@@ -80,15 +77,15 @@ class EmailAuthPage(QWidget):
             result = self._current_results[row]
             detail_content = f"<b>Título:</b> {result.title}<br/>"
             detail_content += f"<b>Status:</b> {result.status.value.upper()}<br/>"
-            detail_content += f"<b>Tempo de Resposta:</b> {result.response_time_ms:.2f} ms<br/><br/>"
-            detail_content += f"<b>Sumário:</b> {result.summary}<br/><br/>"
+            detail_content += f"<b>Tempo:</b> {result.response_time_ms:.2f} ms<br/><br/>"
+            detail_content += f"<b>Resultado:</b> {result.summary}<br/><br/>"
             if result.details:
-                detail_content += f"<b>Detalhes:</b><br/><pre>{result.details}</pre>"
+                detail_content += f"<b>Detalhes Técnicos:</b><br/>{result.details}"
             if result.recommendation:
-                detail_content += f"<br/><b>Recomendação:</b><br/>{result.recommendation}"
+                detail_content += f"<br/><br/><b>Recomendação:</b><br/>{result.recommendation}"
             self.details_text.setText(detail_content)
 
-    def start_auth_analysis(self, domain: str):
+    def start_dnssec_analysis(self, domain: str):
         if self.last_analyzed_domain == domain and self._current_results:
             return
 
@@ -96,71 +93,24 @@ class EmailAuthPage(QWidget):
         self._current_results = []
         self.results_model.update_results([])
         self.last_analyzed_domain = domain
-        self.details_text.setText("Verificando registros de autenticação... Por favor, aguarde.")
+        self.details_text.setText(f"Consultando DNSSEC para {domain}... Por favor, aguarde.")
         
         self.progress_bar.setVisible(True)
-        self.progress_bar.setMaximum(5)
+        self.progress_bar.setMaximum(1)
         self.progress_bar.setValue(0)
         
-        task1 = asyncio.create_task(self._run_spf_check(domain))
-        task2 = asyncio.create_task(self._run_dmarc_check(domain))
-        task3 = asyncio.create_task(self._run_dkim_check(domain))
-        task4 = asyncio.create_task(self._run_mtasts_check(domain))
-        task5 = asyncio.create_task(self._run_tlsrpt_check(domain))
-        self.active_tasks.extend([task1, task2, task3, task4, task5])
+        task = asyncio.create_task(self._run_dnssec_check(domain))
+        self.active_tasks.append(task)
 
-    async def _run_spf_check(self, domain: str):
+    async def _run_dnssec_check(self, domain: str):
         try:
-            results = await check_spf(domain)
+            results = await check_dnssec(domain)
+            self.progress_bar.setMaximum(len(results))
             for r in results:
                 self.check_finished.emit(r)
         except Exception as e:
             self.check_finished.emit(CheckResult(
-                check_id="spf_err", category="Autenticação", title="SPF",
-                status=CheckStatus.ERROR, summary=str(e)
-            ))
-
-    async def _run_dmarc_check(self, domain: str):
-        try:
-            results = await check_dmarc(domain)
-            for r in results:
-                self.check_finished.emit(r)
-        except Exception as e:
-            self.check_finished.emit(CheckResult(
-                check_id="dmarc_err", category="Autenticação", title="DMARC",
-                status=CheckStatus.ERROR, summary=str(e)
-            ))
-
-    async def _run_dkim_check(self, domain: str):
-        try:
-            results = await check_dkim(domain)
-            for r in results:
-                self.check_finished.emit(r)
-        except Exception as e:
-            self.check_finished.emit(CheckResult(
-                check_id="dkim_err", category="Autenticação", title="DKIM",
-                status=CheckStatus.ERROR, summary=str(e)
-            ))
-
-    async def _run_mtasts_check(self, domain: str):
-        try:
-            results = await check_mtasts(domain)
-            for r in results:
-                self.check_finished.emit(r)
-        except Exception as e:
-            self.check_finished.emit(CheckResult(
-                check_id="mtasts_err", category="MTA-STS", title="MTA-STS",
-                status=CheckStatus.ERROR, summary=str(e)
-            ))
-
-    async def _run_tlsrpt_check(self, domain: str):
-        try:
-            results = await check_tlsrpt(domain)
-            for r in results:
-                self.check_finished.emit(r)
-        except Exception as e:
-            self.check_finished.emit(CheckResult(
-                check_id="tlsrpt_err", category="TLS-RPT", title="TLS-RPT",
+                check_id="dnssec_err", category="DNSSEC", title="DNSSEC",
                 status=CheckStatus.ERROR, summary=str(e)
             ))
 
@@ -169,7 +119,6 @@ class EmailAuthPage(QWidget):
         self._current_results.append(result)
         self.results_model.update_results(list(self._current_results))
         self.progress_bar.setValue(len(self._current_results))
-        
         self.table_view.viewport().update()
         
         if len(self._current_results) >= self.progress_bar.maximum():

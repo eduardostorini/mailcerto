@@ -1,13 +1,12 @@
 import asyncio
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
-    QFrame, QGridLayout, QProgressBar, QSplitter, QTableView
+    QFrame, QProgressBar, QSplitter, QTableView, QHeaderView
 )
-from PySide6.QtCore import Qt, Signal, Slot, QSize
-from PySide6.QtGui import QFont, QIcon, QColor
-from mailcerto.ui.models import DNSResultsModel
+from PySide6.QtCore import Qt, Signal, Slot
+from mailcerto.ui.models import IPLocationResultsModel
 from mailcerto.checks.network.ip_location import check_ip_location
-from mailcerto.core.models import CheckStatus
+from mailcerto.core.models import CheckResult, CheckStatus
 
 
 class IPLocationPage(QWidget):
@@ -33,8 +32,11 @@ class IPLocationPage(QWidget):
         layout.addWidget(title)
 
         # Description
-        desc = QLabel("Consulte a localização geográfica de um endereço IP ou domínio usando APIs públicas. "
-                      "Obtém informações como cidade, país, coordenadas GPS, ISP e organização.")
+        desc = QLabel(
+            "Consulte a localização geográfica de um endereço IP ou domínio. "
+            "Domínios são convertidos para IP antes da consulta. "
+            "Usa ipapi.co com fallback automático para ip-api.com em caso de limite de requisições."
+        )
         desc.setObjectName("descLabel")
         desc.setWordWrap(True)
         layout.addWidget(desc)
@@ -71,9 +73,12 @@ class IPLocationPage(QWidget):
         splitter = QSplitter(Qt.Vertical)
 
         # Results table
-        self.results_model = DNSResultsModel()
+        self.results_model = IPLocationResultsModel()
         self.table_view = QTableView()
         self.table_view.setModel(self.results_model)
+        header = self.table_view.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
         self.table_view.clicked.connect(self.on_row_selected)
         splitter.addWidget(self.table_view)
 
@@ -84,11 +89,15 @@ class IPLocationPage(QWidget):
 
         self.details_title = QLabel("Detalhes da Localização")
         self.details_title.setStyleSheet("font-size: 14px; font-weight: bold;")
-        
-        self.details_text = QLabel("Insira um IP ou domínio e clique em 'Analisar Localização' para ver os detalhes.")
+
+        self.details_text = QLabel(
+            "Insira um IP ou domínio e clique em 'Analisar Localização' para ver os detalhes."
+        )
         self.details_text.setWordWrap(True)
         self.details_text.setAlignment(Qt.AlignTop)
-        self.details_text.setStyleSheet("background-color: rgba(0, 0, 0, 0.05); padding: 10px; border-radius: 5px;")
+        self.details_text.setStyleSheet(
+            "background-color: rgba(0, 0, 0, 0.05); padding: 10px; border-radius: 5px;"
+        )
 
         details_layout.addWidget(self.details_title)
         details_layout.addWidget(self.details_text)
@@ -105,7 +114,9 @@ class IPLocationPage(QWidget):
     def on_analyze_clicked(self):
         target = self.target_input.text().strip()
         if not target:
-            self.details_text.setText("<span style='color: red;'>Por favor, insira um IP ou domínio.</span>")
+            self.details_text.setText(
+                "<span style='color: red;'>Por favor, insira um IP ou domínio.</span>"
+            )
             return
 
         self.start_location_analysis(target)
@@ -121,7 +132,7 @@ class IPLocationPage(QWidget):
         self.last_analyzed_target = target
         self.details_text.setText(
             f"<b>Analisando:</b> {target}<br/>"
-            "Consultando API de geo-localização... Por favor, aguarde."
+            "Consultando localização (domínio → IP, depois API)... Por favor, aguarde."
         )
 
         self.progress_bar.setVisible(True)
@@ -135,10 +146,10 @@ class IPLocationPage(QWidget):
         """Executa a verificação de localização de forma assíncrona"""
         try:
             results = await check_ip_location(target)
+            self.progress_bar.setMaximum(len(results))
             for r in results:
                 self.check_finished.emit(r)
         except Exception as e:
-            from mailcerto.core.models import CheckResult
             self.check_finished.emit(CheckResult(
                 check_id="loc_err", category="Localização", title="Localização Geográfica",
                 status=CheckStatus.ERROR, summary=f"Erro ao analisar localização: {str(e)}"
@@ -148,11 +159,11 @@ class IPLocationPage(QWidget):
         """Exibe os detalhes completos do resultado selecionado"""
         if not index.isValid():
             return
-        
+
         row = index.row()
         if 0 <= row < len(self._current_results):
             result = self._current_results[row]
-            
+
             # Criar HTML formatado com os detalhes
             html_content = f"""
             <div style='font-family: Arial, sans-serif;'>
@@ -163,19 +174,19 @@ class IPLocationPage(QWidget):
                     </span><br/>
                     <b>Tempo de resposta:</b> {result.response_time_ms:.2f} ms
                 </div>
-                
+
                 <div style='background-color: rgba(0, 100, 200, 0.1); padding: 10px; border-radius: 5px; margin-bottom: 10px;'>
                     <b>Resultado:</b><br/>
                     {result.summary}
                 </div>
-                
+
                 {f'<div style="background-color: rgba(50, 50, 50, 0.1); padding: 10px; border-radius: 5px; margin-bottom: 10px; font-family: monospace; white-space: pre-wrap;">'
                     f'<b>Detalhes Técnicos:</b><br/>{result.details}</div>' if result.details else ''}
-                
+
                 {f'<div style="background-color: rgba(0, 150, 0, 0.1); padding: 10px; border-radius: 5px;"><b>Recomendação:</b><br/>{result.recommendation}</div>' if result.recommendation else ''}
             </div>
             """
-            
+
             self.details_text.setText(html_content)
 
     @Slot(object)

@@ -7,6 +7,7 @@ from mailcerto.checks.tls.tls_check import check_tls_cert
 from mailcerto.checks.reputation.blacklist_check import DEFAULT_DNSBL_PROVIDERS, check_dnsbl_single
 from mailcerto.checks.http.http_check import check_http_security
 from mailcerto.checks.network.network_check import check_network_diagnostics
+from mailcerto.checks.network.ip_location import check_ip_location
 from mailcerto.checks.rdap.rdap_check import check_rdap_whois
 from datetime import datetime
 
@@ -21,21 +22,21 @@ class SuperAnalyzer:
         """
         # Preparar a lista de tarefas
         tasks = []
-        
+
         # 1. DNS Tasks
         for r_type in ["A", "MX", "NS", "TXT", "SOA"]:
             tasks.append(self._run_and_callback(perform_dns_check(self.clean_domain, r_type), callback_func))
-            
+
         # 2. Email Auth Tasks
         tasks.append(self._run_and_callback_list(check_spf(self.clean_domain), callback_func))
         tasks.append(self._run_and_callback_list(check_dmarc(self.clean_domain), callback_func))
-        
+
         # 3. SMTP Connect Task
         tasks.append(self._run_and_callback_list(perform_smtp_check(self.clean_domain), callback_func))
-        
+
         # 4. TLS Connect Task
         tasks.append(self._run_and_callback_list(check_tls_cert(self.clean_domain), callback_func))
-        
+
         # 5. Blacklists ZEN & Spamcop
         for provider in DEFAULT_DNSBL_PROVIDERS[:2]: # Limit to top 2 to keep speed fast
             # We need an IP for DNSBL, resolved from domain
@@ -47,12 +48,15 @@ class SuperAnalyzer:
         # 7. Network Diagnostics Task
         tasks.append(self._run_and_callback_list(check_network_diagnostics(self.clean_domain), callback_func))
 
-        # 8. RDAP Task
+        # 8. IP Geo-Location Task
+        tasks.append(self._run_and_callback_list(check_ip_location(self.clean_domain), callback_func))
+
+        # 9. RDAP Task
         tasks.append(self._run_and_callback_list(check_rdap_whois(self.clean_domain), callback_func))
 
         # Aguarda todas terminarem
         completed_results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         # Unificar e retornar lista final
         flat_results = []
         for r in completed_results:

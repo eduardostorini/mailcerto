@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório MailCerto - {{ domain }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #007bff;
+            margin: 0;
+        }
+        .header .meta {
+            color: #666;
+            margin-top: 10px;
+        }
+        .summary {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        .summary h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .stat-box {
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            border-left: 4px solid #007bff;
+        }
+        .stat-box.success { border-left-color: #28a745; }
+        .stat-box.warning { border-left-color: #ffc107; }
+        .stat-box.error { border-left-color: #dc3545; }
+        .stat-box.critical { border-left-color: #dc3545; }
+        .stat-box.info { border-left-color: #17a2b8; }
+        .stat-box.recommendation { border-left-color: #6f42c1; }
+        .stat-box.skipped { border-left-color: #6c757d; }
+        .stat-box.inconclusive { border-left-color: #6c757d; }
+        .stat-box .number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .stat-box .label {
+            color: #666;
+            font-size: 14px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            color: #333;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+        .check-item {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #ccc;
+        }
+        .check-item.success { border-left-color: #28a745; }
+        .check-item.warning { border-left-color: #ffc107; }
+        .check-item.error { border-left-color: #dc3545; }
+        .check-item.critical { border-left-color: #dc3545; }
+        .check-item.info { border-left-color: #17a2b8; }
+        .check-item.recommendation { border-left-color: #6f42c1; }
+        .check-item.skipped { border-left-color: #6c757d; }
+        .check-item.inconclusive { border-left-color: #6c757d; }
+        .check-item .title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .check-item .status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .check-item.success .status { background-color: #d4edda; color: #155724; }
+        .check-item.warning .status { background-color: #fff3cd; color: #856404; }
+        .check-item.error .status { background-color: #f8d7da; color: #721c24; }
+        .check-item.critical .status { background-color: #f8d7da; color: #721c24; }
+        .check-item.info .status { background-color: #d1ecf1; color: #0c5460; }
+        .check-item.recommendation .status { background-color: #e2d5f1; color: #4a2c7a; }
+        .check-item.skipped .status { background-color: #e2e3e5; color: #383d41; }
+        .check-item.inconclusive .status { background-color: #e2e3e5; color: #383d41; }
+        .check-item .summary {
+            color: #666;
+            margin-top: 5px;
+        }
+        .check-item .details {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: white;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .check-item .recommendation {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #fff3cd;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Relatório de Análise MailCerto</h1>
+            <div class="meta">
+                <strong>Domínio:</strong> {{ domain }}<br>
+                <strong>Data:</strong> {{ generated_at }}<br>
+                <strong>Total de Verificações:</strong> {{ total_checks }}
+            </div>
+        </div>
+
+        <div class="summary">
+            <h2>Resumo Executivo</h2>
+            <div class="stats">
+                <div class="stat-box success">
+                    <div class="number">{{ success_count }}</div>
+                    <div class="label">Sucesso</div>
+                </div>
+                <div class="stat-box warning">
+                    <div class="number">{{ warning_count }}</div>
+                    <div class="label">Avisos</div>
+                </div>
+                <div class="stat-box error">
+                    <div class="number">{{ error_count }}</div>
+                    <div class="label">Erros</div>
+                </div>
+                <div class="stat-box critical">
+                    <div class="number">{{ critical_count }}</div>
+                    <div class="label">Críticos</div>
+                </div>
+            </div>
+        </div>
+
+        {% for category, checks in categorized_checks.items() %}
+        <div class="section">
+            <h2>{{ category }}</h2>
+            {% for check in checks %}
+            <div class="check-item {{ check.status.value }}">
+                <div class="title">
+                    {{ check.title }}
+                    <span class="status">{{ check.status.value.upper() }}</span>
+                </div>
+                <div class="summary">{{ check.summary }}</div>
+                {% if check.details %}
+                <div class="details">{{ check.details }}</div>
+                {% endif %}
+                {% if check.recommendation %}
+                <div class="recommendation"><strong>Recomendação:</strong> {{ check.recommendation }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+
+        <div class="footer">
+            <p>Gerado por MailCerto - Ferramenta de Análise de Segurança de Domínios e E-mail</p>
+            <p>{{ generated_at }}</p>
+        </div>
+    </div>
+</body>
+</html>
